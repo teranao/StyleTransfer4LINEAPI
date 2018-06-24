@@ -61,6 +61,34 @@ def check_args(args):
 
     return args
 
+def style(content, output, style_model):
+
+    # load content image
+    content_image = utils.load_image(content, max_size=None)
+
+    # open session
+    soft_config = tf.ConfigProto(allow_soft_placement=True)
+    soft_config.gpu_options.allow_growth = True  # to deal with large image
+    sess = tf.Session(config=soft_config)
+
+    # build the graph
+    transformer = style_transfer_tester.StyleTransferTester(session=sess,
+                                                            model_path=style_model,
+                                                            content_image=content_image,
+                                                            )
+    # execute the graph
+    start_time = time.time()
+    output_image = transformer.test()
+    end_time = time.time()
+
+    # save result
+    utils.save_image(output_image, output)
+
+    # report execution time
+    shape = content_image.shape  # (batch, width, height, channel)
+    print('Execution time for a %d x %d image : %f msec' % (
+    shape[0], shape[1], 1000. * float(end_time - start_time) / 60))
+
 """main"""
 def main():
 
