@@ -191,8 +191,4 @@ if __name__ == "__main__":
     # create tmp dir for download content
     make_static_tmp_dir()
 
-    # create user stats dictionary
-    global user_dict
-    user_dict = {}
-
     app.run(debug=options.debug, port=options.port)
