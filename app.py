@@ -40,6 +40,16 @@ handler = WebhookHandler("f66aade52ceefbb6e5cf48bdc9a1a625")
 
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
+base_url = "https://nayopu.ngrok.io/"
+
+styles = {
+    "la muse": "la_muse",
+    "princess": "rain_princess",
+    "scream": "the_scream",
+    "shipwreck": "shipwreck",
+    "udnie": "udnie",
+    "wave": "wave",
+}
 
 class UserStatus():
     def __init__(self):
@@ -84,21 +94,21 @@ def callback():
 def handle_text_message(event):
     text = event.message.text
 
-    bubble = BubbleContainer(
-        hero=ImageComponent(
-            url='https://nayopu.ngrok.io/style/apple.jpg',
-            size='full',
-            aspect_ratio='20:13',
-            aspect_mode='cover',
-            action=MessageAction(label='wave', text="wave")
-        )
-    )
+    if text == "ばいばい":
+        if isinstance(event.source, SourceGroup):
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text='サヨウナラ'))
+            line_bot_api.leave_group(event.source.group_id)
+        elif isinstance(event.source, SourceRoom):
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text='サヨウナラ'))
+            line_bot_api.leave_room(event.source.room_id)
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="Bot can't leave from 1:1 chat"))
 
-    message = FlexSendMessage(alt_text="Which image do you like?", contents=bubble)
-    line_bot_api.reply_message(
-        event.reply_token,
-        message
-    )
+
 
 
 @handler.add(MessageEvent, message=(ImageMessage, VideoMessage, AudioMessage))
@@ -124,49 +134,52 @@ def handle_content_message(event):
     os.rename(tempfile_path, dist_path)
     image_path = os.path.join('static', 'tmp', dist_name)
 
-    style_image = {
-
-    }
-    carousel = CarouselTemplate(columns=[
-        BubbleContainer(
-            hero=ImageComponent(
-                url='https://nayopu.ngrok.io/style/apple.jpg',
-                size='full',
-                aspect_ratio='20:13',
-                aspect_mode='cover',
-                action=MessageAction(label='wave', text="wave")
+    # list of ImageCarouselColumn
+    clist = []
+    for label, model in styles.items():
+        clist.append(
+            ImageCarouselColumn(
+                image_url=base_url+os.path.join('static', 'style_thumb', model+".jpg"),
+                action=PostbackAction(label=label, data=model+" "+dist_name, text=label)
             )
-        )]
-    )
+        )
+
+    image_carousel_template = ImageCarouselTemplate(columns=clist)
 
     template_message = TemplateSendMessage(
-        alt_text='Carousel alt text', template=carousel
-    )
-    line_bot_api.reply_message(
-        event.reply_token,
-        template_message
-    )
+        alt_text='ImageCarousel alt text', template=image_carousel_template)
+    line_bot_api.reply_message(event.reply_token, template_message)
+
+
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    # split postback data
+    model, dist_name = event.postback.data.split()
+    output_image = model+dist_name
+
+    image_path = os.path.join('static', 'tmp', dist_name)
+
+    output_path = os.path.join('static', 'output', output_image)
+    thumb_path = os.path.join('static', 'thumb', output_image)
+
 
     # style taransfer
-    style(content=image_path, output=os.path.join('static', 'output', dist_name), style_model="models/wave.ckpt")
+    style(
+        content=image_path,
+        output=output_path,
+        style_model=os.path.join('models', model+".ckpt")
+    )
 
     # create thumbnail
-    img = Image.open(os.path.join('static', 'output', dist_name))
+    img = Image.open(output_path)
     img.thumbnail((240, 240))
-    img.save(os.path.join('static', 'thumb', dist_name))
+    img.save(thumb_path)
 
     # reply
-    base_url = "https://ebc4b394.ngrok.io/"
-    line_bot_api.reply_message(event.reply_token, ImageSendMessage(original_content_url=base_url+os.path.join('static', 'output', dist_name), preview_image_url=base_url+os.path.join('static', 'thumb', dist_name)))
-
-    # line_bot_api.reply_message(
-
-    # event.reply_token, [
-    #    TextSendMessage(text='Save content.'),
-    #    TextSendMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
-    # ])
-
-    # style(content="content/cockatoo.jpg", output="result.jpg", style_model="models/wave.ckpt")
+    line_bot_api.reply_message(event.reply_token, ImageSendMessage(
+        original_content_url=base_url+output_path,
+        preview_image_url=base_url+thumb_path
+    ))
 
 
 if __name__ == "__main__":
