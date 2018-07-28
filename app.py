@@ -2,9 +2,11 @@
 
 from __future__ import unicode_literals
 
+import os, sys
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+
 import errno
-import os
-import sys
+
 import tempfile
 from argparse import ArgumentParser
 
@@ -18,17 +20,12 @@ from linebot.exceptions import (
 )
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
-    SourceUser, SourceGroup, SourceRoom,
-    TemplateSendMessage, ConfirmTemplate, MessageAction,
-    ButtonsTemplate, ImageCarouselTemplate, ImageCarouselColumn, URIAction,
-    PostbackAction, DatetimePickerAction, FlexSendMessage,
-    CarouselTemplate, CarouselColumn, PostbackEvent, ImageComponent,
-    StickerMessage, StickerSendMessage, LocationMessage, LocationSendMessage,
-    ImageMessage, VideoMessage, AudioMessage, FileMessage, BubbleContainer,
-    UnfollowEvent, FollowEvent, JoinEvent, LeaveEvent, BeaconEvent, ImageSendMessage
+    SourceGroup, SourceRoom,
+    TemplateSendMessage, ImageCarouselTemplate, ImageCarouselColumn, PostbackAction, PostbackEvent, ImageMessage, VideoMessage, AudioMessage,
+    ImageSendMessage
 )
 
-from run_test import style
+from fast_style_transfer.run_test import style
 
 from PIL import Image
 
@@ -38,7 +35,9 @@ line_bot_api = LineBotApi(
     "o1Pv6P2aX5mKfn9llnkoOw2EKauNWYVeoWZ20kTMeP5I83airwGE1gjlVaYkb+jUTt+c1623mMu0FMK+QNSjH7P2Ua8k+cGKzS4sKrFVDQ4E5W1TVnlJj+Mi/LaeFOy9UFtDk374dpLrXbrrYJOPuwdB04t89/1O/w1cDnyilFU=")
 handler = WebhookHandler("f66aade52ceefbb6e5cf48bdc9a1a625")
 
-static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
+static_path = os.path.join(
+    os.path.dirname(__file__), 'static'
+)
 
 base_url = "https://nayopu.ngrok.io/"
 
@@ -49,6 +48,8 @@ styles = {
     "shipwreck": "shipwreck",
     "udnie": "udnie",
     "wave": "wave",
+    "howl": "howl",
+    "bacon": "bacon"
 }
 
 class UserStatus():
@@ -65,12 +66,17 @@ class UserStatus():
 # function for create tmp dir for download content
 def make_static_tmp_dir():
     try:
-        os.makedirs(static_tmp_path)
+        os.makedirs(static_path)
     except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(static_tmp_path):
+        if exc.errno == errno.EEXIST and os.path.isdir(static_path):
             pass
         else:
             raise
+    else:
+        os.makedirs(os.path.join(static_path, 'fast_style_transfer', "tmp"))
+        os.makedirs(os.path.join(static_path, 'fast_style_transfer', "output"))
+        os.makedirs(os.path.join(static_path, 'fast_style_transfer', "thumb"))
+
 
 
 @app.route("/callback", methods=['POST'])
@@ -94,7 +100,7 @@ def callback():
 def handle_text_message(event):
     text = event.message.text
 
-    if text == "ばいばい":
+    if text == "ばいばいなよぷ":
         if isinstance(event.source, SourceGroup):
             line_bot_api.reply_message(
                 event.reply_token, TextSendMessage(text='サヨウナラ'))
@@ -123,7 +129,7 @@ def handle_content_message(event):
         return
 
     message_content = line_bot_api.get_message_content(event.message.id)
-    with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
+    with tempfile.NamedTemporaryFile(dir=os.path.join(static_path, 'fast_style_transfer', "tmp"), prefix=ext + '-', delete=False) as tf:
         for chunk in message_content.iter_content():
             tf.write(chunk)
         tempfile_path = tf.name
@@ -132,14 +138,14 @@ def handle_content_message(event):
     dist_path = tempfile_path + '.' + ext
     dist_name = os.path.basename(dist_path)
     os.rename(tempfile_path, dist_path)
-    image_path = os.path.join('static', 'tmp', dist_name)
+    image_path = os.path.join('static', 'fast_style_transfer', 'tmp', dist_name)
 
     # list of ImageCarouselColumn
     clist = []
     for label, model in styles.items():
         clist.append(
             ImageCarouselColumn(
-                image_url=base_url+os.path.join('static', 'style_thumb', model+".jpg"),
+                image_url=base_url+os.path.join('static', 'fast_style_transfer', 'style_thumb', model+".jpg"),
                 action=PostbackAction(label=label, data=model+" "+dist_name, text=label)
             )
         )
@@ -147,7 +153,7 @@ def handle_content_message(event):
     image_carousel_template = ImageCarouselTemplate(columns=clist)
 
     template_message = TemplateSendMessage(
-        alt_text='ImageCarousel alt text', template=image_carousel_template)
+        alt_text='Which style do you like?', template=image_carousel_template)
     line_bot_api.reply_message(event.reply_token, template_message)
 
 
@@ -157,17 +163,17 @@ def handle_postback(event):
     model, dist_name = event.postback.data.split()
     output_image = model+dist_name
 
-    image_path = os.path.join('static', 'tmp', dist_name)
+    image_path = os.path.join('static', 'fast_style_transfer', 'tmp', dist_name)
 
-    output_path = os.path.join('static', 'output', output_image)
-    thumb_path = os.path.join('static', 'thumb', output_image)
+    output_path = os.path.join('static', 'fast_style_transfer', 'output', output_image)
+    thumb_path = os.path.join('static', 'fast_style_transfer', 'thumb', output_image)
 
 
     # style taransfer
     style(
         content=image_path,
         output=output_path,
-        style_model=os.path.join('models', model+".ckpt")
+        style_model=os.path.join('fast_style_transfer', 'models', model+".ckpt")
     )
 
     # create thumbnail
