@@ -31,9 +31,12 @@ from PIL import Image
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi(
-    "o1Pv6P2aX5mKfn9llnkoOw2EKauNWYVeoWZ20kTMeP5I83airwGE1gjlVaYkb+jUTt+c1623mMu0FMK+QNSjH7P2Ua8k+cGKzS4sKrFVDQ4E5W1TVnlJj+Mi/LaeFOy9UFtDk374dpLrXbrrYJOPuwdB04t89/1O/w1cDnyilFU=")
-handler = WebhookHandler("f66aade52ceefbb6e5cf48bdc9a1a625")
+# get keys
+channel_secret = os.getenv('LINE_CHANNEL_SECRET', None)
+channel_access_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', None)
+
+line_bot_api = LineBotApi(channel_access_token)
+handler = WebhookHandler(channel_secret)
 
 static_path = os.path.join(
     os.path.dirname(__file__), 'static'
