@@ -409,4 +409,4 @@ if __name__ == "__main__":
     make_static_tmp_dir()
 
     # app.run(debug=options.debug, port=options.port)
-    app.run(debug=options.debug, port=int(os.environ.get("PORT", 5000)))
+    app.run(debug=options.debug, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
