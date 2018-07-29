@@ -1,1 +1,1 @@
-web: python app_kitchen.py
+web: python app.py
