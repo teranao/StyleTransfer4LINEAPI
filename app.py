@@ -79,6 +79,7 @@ def make_static_tmp_dir():
         os.makedirs(os.path.join(static_path, 'fast_style_transfer', "tmp"))
         os.makedirs(os.path.join(static_path, 'fast_style_transfer', "output"))
         os.makedirs(os.path.join(static_path, 'fast_style_transfer', "thumb"))
+        os.makedirs(os.path.join(static_path, 'fast_style_transfer', "style_thumb"))
 
 
 
